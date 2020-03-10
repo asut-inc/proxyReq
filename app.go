@@ -20,30 +20,49 @@ var urls Urls
 func main(){
 	readJson()
 
-	for i:=0; i<len(urls); i++ {
-		go doReq(i)
-	}
+	f()
+
 	fmt.Scanln()
 }
 
-func doReq(i int){
-	t_start:= time.Now()
-
-	os.Setenv("HTTP_PROXY", "http://" + urls[i].IP + ":" + urls[i].Port)
+func f(){
+	defer func() {
+        if r := recover(); r != nil {
+            fmt.Println("Recovered in f", r)
+        }
+    }()
 	
+	for i:=0; i<len(urls); i++ {
+		doReq(i)
+	}
+}
+
+func doReq(i int){
+	t_start := time.Now()
+
+	err := os.Setenv("HTTP_PROXY", "http://" + urls[i].IP + ":" + urls[i].Port)
+	if err != nil {
+		fmt.Println(i, err)
+		panic(err)
+	}
+
 	proxyUrl, err := url.Parse("http://" + urls[i].IP + ":" + urls[i].Port)
 	if err != nil {
 		fmt.Println(i, err)
+		panic(err)
 	}
 
-	myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}}
+	myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: 5 * time.Second}
 	res, err := myClient.Get("http://2children.ru/news/index")
 	if err != nil {
 		fmt.Println(i, err)
+		panic(err)
 	}
 
 	t_end := time.Now()
 	fmt.Println(i, res.StatusCode, t_end.Sub(t_start))
+	
+	doReq(i+1)
 }
 
 func readJson(){
