@@ -1,13 +1,13 @@
 package main
 
-import(
-	"fmt"
-	"net/http"
-	"time"
-	"os"
-	"net/url"
+import (
 	"encoding/json"
-    "io/ioutil"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"os"
+	"time"
 )
 
 type Urls []struct {
@@ -17,7 +17,7 @@ type Urls []struct {
 
 var urls Urls
 
-func main(){
+func main() {
 	readJson()
 
 	f()
@@ -25,55 +25,55 @@ func main(){
 	fmt.Scanln()
 }
 
-func f(){
+func f() {
 	defer func() {
-        if r := recover(); r != nil {
-            fmt.Println("Recovered in f", r)
-        }
-    }()
-	
-	for i:=0; i<len(urls); i++ {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in f", r)
+		}
+	}()
+
+	for i := 0; i < len(urls); i++ {
 		doReq(i)
 	}
 }
 
-func doReq(i int){
+func doReq(i int) {
 	t_start := time.Now()
 
-	err := os.Setenv("HTTP_PROXY", "http://" + urls[i].IP + ":" + urls[i].Port)
+	err := os.Setenv("HTTP_PROXY", "http://"+urls[i].IP+":"+urls[i].Port)
 	if err != nil {
 		fmt.Println(i, err)
-		panic(err)
+		return
 	}
 
 	proxyUrl, err := url.Parse("http://" + urls[i].IP + ":" + urls[i].Port)
 	if err != nil {
 		fmt.Println(i, err)
-		panic(err)
+		return
 	}
 
 	myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}, Timeout: 5 * time.Second}
 	res, err := myClient.Get("http://2children.ru/news/index")
 	if err != nil {
 		fmt.Println(i, err)
-		panic(err)
+		return
 	}
 
 	t_end := time.Now()
 	fmt.Println(i, res.StatusCode, t_end.Sub(t_start))
-	
-	doReq(i+1)
+
+	doReq(i + 1)
 }
 
-func readJson(){
+func readJson() {
 	jsonFile, err := os.Open("proxies.json")
-    if err != nil {
-        fmt.Println(err)
-    }
+	if err != nil {
+		fmt.Println(err)
+	}
 
-    defer jsonFile.Close()
+	defer jsonFile.Close()
 
-    byteValue, _ := ioutil.ReadAll(jsonFile)
+	byteValue, _ := ioutil.ReadAll(jsonFile)
 
 	json.Unmarshal(byteValue, &urls)
 }
